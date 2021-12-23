@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 
 const clientID = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
+const port = process.env.PORT;
 
 
 const app = express();
@@ -35,7 +36,7 @@ app.all("/logout", (request, response) => {
   return response.redirect("/");
 });
 
-app.listen(4000);
+app.listen(port);
 
 
 
