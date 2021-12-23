@@ -16,6 +16,7 @@ app.get("/", async (request, response) => {
     response.cookie("access", JSON.stringify(tokens), {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
+      secure: config().httpsSupported
     });
     return response.send(`<h2> Welcome, ${name}!</h2> <br>${image}
     <br>
@@ -40,6 +41,7 @@ app.get("/callBack", async (request, response) => {
   response.cookie("access", JSON.stringify(tokens), {
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
+    secure: config().httpsSupported
   });
   return response.redirect(`/`);
 });
@@ -122,7 +124,9 @@ function config() {
   const client_secret = process.env.CLIENT_SECRET;
   const port = process.env.PORT;
   const baseUrl = process.env.DOMAIN;
-  return { clientID, client_secret, port, baseUrl };
+  const httpsSupported = process.env.HTTPS === 'true';
+
+  return { clientID, client_secret, port, baseUrl, httpsSupported };
 }
 
 async function getNewAccessToken(tokens){
