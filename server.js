@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 const clientID = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 const port = process.env.PORT;
+const baseUrl = process.env.DOMAIN
 
 
 const app = express();
@@ -42,7 +43,7 @@ app.listen(port);
 
 function authUrl() {
  
-  const redirectID = `http://localhost:4000/callBack`; // host name to be extracted from Heroku & add URI at google API
+  const redirectID = `${baseUrl}/callBack`;
   const response = `code`;
   const scope = `https://www.googleapis.com/auth/userinfo.profile`;
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -58,7 +59,7 @@ function authUrl() {
 function accessTokens(code) {
 
   const grant = "authorization_code";
-  const redirect_uri = "http://localhost:4000/callBack"; //Redirect URL: change
+  const redirect_uri = "${baseUrl}/callBack"; 
 
   const params = new URLSearchParams();
   params.append("client_id", clientID);
