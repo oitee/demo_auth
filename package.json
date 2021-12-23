@@ -1,0 +1,27 @@
+{
+  "name": "demoauth",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "express": "^4.17.2",
+    "node-fetch": "^3.1.0"
+  },
+  "type": "module",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oitee/demo_auth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/oitee/demo_auth/issues"
+  },
+  "homepage": "https://github.com/oitee/demo_auth#readme",
+  "description": ""
+}
