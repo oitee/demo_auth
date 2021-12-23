@@ -7,8 +7,16 @@ app.use(cookieParser());
 
 app.get("/", async (request, response) => {
   if (request.cookies["access"]) {
-    const token = JSON.parse(request.cookies.access);
-    const {image, name} = await getProfile(token.access_token);
+    const cookieTokens = JSON.parse(request.cookies.access);
+    const profile = await getProfile(cookieTokens);
+    if(!profile){
+      return response.redirect('/logout');
+    }
+    const { image, name, tokens } = profile;
+    response.cookie("access", JSON.stringify(tokens), {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
     return response.send(`<h2> Welcome, ${name}!</h2> <br>${image}
     <br>
     <a href='/logout'>Logout</a>
@@ -31,7 +39,7 @@ app.get("/callBack", async (request, response) => {
 
   response.cookie("access", JSON.stringify(tokens), {
     httpOnly: true,
-    maxAge: (tokens.expires_in - 5) * 1000,
+    maxAge: 24 * 60 * 60 * 1000,
   });
   return response.redirect(`/`);
 });
@@ -56,6 +64,8 @@ function authUrl() {
   authUrl.searchParams.append("redirect_uri", redirectID);
   authUrl.searchParams.append("response_type", response);
   authUrl.searchParams.append("scope", scope);
+  authUrl.searchParams.append("prompt", "consent");
+  authUrl.searchParams.append("access_type", "offline");
 
   return authUrl.href;
 }
@@ -78,13 +88,33 @@ function accessTokens(code) {
   }).then((res) => res.json());
 }
 
-async function getProfile(accessToken) {
+async function getProfile(tokens, retrying = false) {
   const scope = `https://www.googleapis.com/oauth2/v1/userinfo?alt=json`;
-  const res = await fetch(scope, {
+  return fetch(scope, {
     method: "get",
-    headers: { Authorization: `Bearer ${accessToken}` },
-  }).then((res) => res.json());
-  return { image: `<img src="${res.picture}">`, name: `${res.name}` };
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  })
+    .then((res) => res.json())
+    .then(({ picture, name }) => {
+      if (picture) {
+        return {
+          image: `<img src="${picture}">`,
+          name: `${name}`,
+          tokens: tokens,
+        };
+      }
+      return {};
+    })
+    .then(async (res) => {
+      if (!res.image) {
+        if (retrying) {
+          return {};
+        }
+        let newTokens = await getNewAccessToken(tokens);
+        return getProfile(newTokens, true);
+      }
+      return res;
+    });
 }
 
 function config() {
@@ -93,4 +123,20 @@ function config() {
   const port = process.env.PORT;
   const baseUrl = process.env.DOMAIN;
   return { clientID, client_secret, port, baseUrl };
+}
+
+async function getNewAccessToken(tokens){
+  const params = new URLSearchParams();
+  const {clientID, client_secret} = config();
+  params.append("client_id", clientID);
+  params.append("client_secret", client_secret);
+  params.append("grant_type", "refresh_token");
+  params.append("refresh_token", tokens.refresh_token)
+  
+  return fetch(`https://oauth2.googleapis.com/token`, {
+    method: "post",
+    body: params
+  })
+  .then(res => res.json())
+  
 }
