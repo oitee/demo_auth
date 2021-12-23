@@ -2,29 +2,33 @@ import express from "express";
 import fetch from "node-fetch";
 import cookieParser from "cookie-parser";
 
-const clientID = process.env.CLIENT_ID;
-const client_secret = process.env.CLIENT_SECRET;
-const port = process.env.PORT;
-const baseUrl = process.env.DOMAIN
-
-
 const app = express();
 app.use(cookieParser());
 
 app.get("/", async (request, response) => {
   if (request.cookies["access"]) {
     const token = JSON.parse(request.cookies.access);
-    const image = await getImage(token.access_token);
-    return response.send(`Welcome!<br>${image}`);
+    const {image, name} = await getProfile(token.access_token);
+    return response.send(`<h2> Welcome, ${name}!</h2> <br>${image}
+    <br>
+    <a href='/logout'>Logout</a>
+    `);
   }
   return response.send(`
-    <a href=${authUrl()}> Log in with Google</a>
+    <h1> <a href=${authUrl()}> Log in with Google</a></h1>
     `);
 });
 
 app.get("/callBack", async (request, response) => {
   const accessCode = request.query.code;
   const tokens = await accessTokens(accessCode);
+
+  if (tokens.error) {
+    console.error("Error in fetching tokens");
+    console.error(tokens);
+    return response.status(500).send("Something went wrong");
+  }
+
   response.cookie("access", JSON.stringify(tokens), {
     httpOnly: true,
     maxAge: (tokens.expires_in - 5) * 1000,
@@ -37,12 +41,12 @@ app.all("/logout", (request, response) => {
   return response.redirect("/");
 });
 
-app.listen(port);
-
-
+app.listen(config().port, () =>
+  console.log(`Started listening on ${process.env.PORT}...`)
+);
 
 function authUrl() {
- 
+  const { clientID, baseUrl } = config();
   const redirectID = `${baseUrl}/callBack`;
   const response = `code`;
   const scope = `https://www.googleapis.com/auth/userinfo.profile`;
@@ -57,9 +61,9 @@ function authUrl() {
 }
 
 function accessTokens(code) {
-
+  const { clientID, client_secret, baseUrl } = config();
   const grant = "authorization_code";
-  const redirect_uri = "${baseUrl}/callBack"; 
+  const redirect_uri = `${baseUrl}/callBack`;
 
   const params = new URLSearchParams();
   params.append("client_id", clientID);
@@ -74,11 +78,19 @@ function accessTokens(code) {
   }).then((res) => res.json());
 }
 
-async function getImage(accessToken) {
+async function getProfile(accessToken) {
   const scope = `https://www.googleapis.com/oauth2/v1/userinfo?alt=json`;
   const res = await fetch(scope, {
     method: "get",
     headers: { Authorization: `Bearer ${accessToken}` },
   }).then((res) => res.json());
-  return `<img src="${res.picture}">`;
+  return { image: `<img src="${res.picture}">`, name: `${res.name}` };
+}
+
+function config() {
+  const clientID = process.env.CLIENT_ID;
+  const client_secret = process.env.CLIENT_SECRET;
+  const port = process.env.PORT;
+  const baseUrl = process.env.DOMAIN;
+  return { clientID, client_secret, port, baseUrl };
 }
