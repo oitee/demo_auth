@@ -8,11 +8,11 @@ app.use(cookieParser());
 app.get("/", async (request, response) => {
   if (request.cookies["access"]) {
     const cookieTokens = JSON.parse(request.cookies.access);
-    const profile = await getProfile(cookieTokens);
-    if(!profile){
+    const { image, name, tokens } = await getProfile(cookieTokens);
+    if(!tokens){
       return response.redirect('/logout');
     }
-    const { image, name, tokens } = profile;
+    
     response.cookie("access", JSON.stringify(tokens), {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
@@ -113,6 +113,9 @@ async function getProfile(tokens, retrying = false) {
           return {};
         }
         let newTokens = await getNewAccessToken(tokens);
+        if(newTokens.error){
+          return {};
+        }
         return getProfile(newTokens, true);
       }
       return res;
